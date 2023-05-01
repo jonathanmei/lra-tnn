@@ -487,7 +487,8 @@ def create_trainer(config, **kwargs):
         logger = WandbLogger(
             config=utils.to_dict(config, recursive=True),
             settings=wandb.Settings(start_method="fork"),
-            project=config.wandb,
+            project=config.wandb.project,
+            name=config.wandb.name,
         )
 
     # Lightning callbacks
