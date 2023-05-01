@@ -27,8 +27,11 @@ dpb_layers=${18}
 PRENORM=${19}
 warmup_steps=${20}
 
-python ${program_path}/train.py wandb=Baselines experiment=${ARCH}-lra-${TASK} \
-	trainer.gpus=$cards \
+python ${program_path}/train.py \
+	wandb.project=Baselines-lra \
+	+wandb.name=${ARCH}-lra-${TASK} \
+	experiment=${ARCH}-lra-${TASK} \
+	trainer.gpus=$cards `#trainer.resume_from_checkpoint=${program_path}/outputs/2023-04-29/21-02-08/checkpoints/last.ckpt` \
 	loader.batch_size=${BS} \
 	loader.num_workers=${n_works} \
 	scheduler.num_warmup_steps=${warmup_steps} \

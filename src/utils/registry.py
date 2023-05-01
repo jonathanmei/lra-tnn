@@ -86,6 +86,7 @@ layer = {
     "tno_v2": "src.models.sequence.tnn_draft.tno_v2.TNOV2",
     "tno": "src.models.sequence.tnn_draft.tno.TNO",
     "tno2d": "src.models.sequence.tnn_draft.tno2d.TNO",
+    "skitno2d": "src.models.sequence.tnn_draft.skitno2d.SKITNO2d",
     # tnn
     "gtu": "src.models.sequence.tnn.gtu.Gtu",
     "gtu2d": "src.models.sequence.tnn.gtu2d.Gtu2d",
