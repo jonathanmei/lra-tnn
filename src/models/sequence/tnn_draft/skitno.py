@@ -3,10 +3,8 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../..'))
 
-import numpy as np
 import torch
 import torch.nn.functional as F
-from einops import rearrange
 from torch import nn
 
 from ..utils import logging_info
@@ -15,7 +13,7 @@ from .dpb_v4 import SimpleRMSNorm
 from laxtnn.modules.skitno_inv_time import SKITnoInvTime 
 
 @dataclass
-class TnoConfig:
+class SkiTnoConfig:
     h: int
     #n: int
     dim: int
@@ -29,7 +27,8 @@ class TnoConfig:
     #bias: bool
     act_type: str
 
-class SKITNO2d(nn.Module):
+
+class SKITNO(nn.Module):
     def __init__(
         self,
         d_model,
@@ -51,9 +50,6 @@ class SKITNO2d(nn.Module):
         gamma=0.999,
         # token shift
         token_shift_type=-1,
-        # tno
-        tno_H=32,
-        tno_W=32,
         #ski
         rank=32,
         nk=16,
@@ -63,12 +59,6 @@ class SKITNO2d(nn.Module):
         self.index = index
 
         super().__init__()
-        logging_info(f"drop {dropout}")
-        self.p = dropout
-        if self.p > 0:
-            self.dropout = nn.Dropout(p=dropout)
-        self.H = tno_H
-        self.W = tno_W
         self.d_output = d_model
         self.embed_dim = d_model
         self.num_heads = n_heads
@@ -80,7 +70,6 @@ class SKITNO2d(nn.Module):
         logging_info(f"self.resi_param {self.resi_param}")
         if self.resi_param:
             self.d = nn.Parameter(torch.randn(self.embed_dim))
-
         d1 = int(self.expand_ratio * d_model)
         d1 = (d1 // self.num_heads) * self.num_heads
         d2 = d_model
@@ -101,22 +90,18 @@ class SKITNO2d(nn.Module):
         self.normalize = normalize
         self.gamma = gamma
         self.bias = bias
-        
-        
-        self.forward = self.forward4
-        config = TnoConfig(
+        config = SkiTnoConfig(
             h=self.num_heads,
             dim=self.head_dim,
             causal=self.causal,
             gamma=self.gamma,
-            # jmei
+            #jmei
             act_type="none",
         ).__dict__
 
         self.rank = rank
         self.nk = nk
-        self.toep1 = SKITnoInvTime(r=rank, nk=nk, **config)
-        self.toep2 = SKITnoInvTime(r=rank, nk=nk, **config)
+        self.toep = SKITnoInvTime(r=rank, nk=nk, **config)
 
         logging_info(f"self.num_heads {self.num_heads}")
         logging_info(f"self.normalize {self.normalize}")
@@ -151,13 +136,14 @@ class SKITNO2d(nn.Module):
         nn.init.normal_(self.o.weight, std=0.02)
         nn.init.normal_(self.o.bias, std=0.02)
 
-    def get_norm_fun(self, norm_type, embed_dim):
+    def get_norm_fun(self, norm_type, d_model):
         if norm_type == "simplermsnorm":
             logging_info("here! simple rmsnorm")
-            return SimpleRMSNorm(embed_dim)
+            return SimpleRMSNorm(d_model)
         else:
             logging_info("here! layer norm")
-            return nn.LayerNorm(embed_dim)
+            return nn.LayerNorm(d_model)
+            # return nn.BatchNorm1d(d_model)
 
     def get_act_fun(self, act_fun):
         logging_info(act_fun)
@@ -194,13 +180,8 @@ class SKITNO2d(nn.Module):
         else:
             return lambda x: x
 
-    
-    def forward4(self, x, state=None):
+    def forward(self, x, state=None):
         # x: b, h * w, d
-        n = x.shape[1]
-        H = int(np.sqrt(n))
-        W = n // H
-
         if self.token_shift_type == 1:
             x = self.token_shift(x)
         elif self.token_shift_type == 2:
@@ -208,23 +189,8 @@ class SKITNO2d(nn.Module):
             x = self.coef * q1 + (1 - self.coef) * x
 
         u = self.act(self.u_proj(x))
-        v = self.act(self.v_proj(x))
-        # reshapes... hopefully not too slow
-        v1 = rearrange(v, "b (H W) g -> (b H) W g", H=H, W=W)
-        o1 = self.toep1(v1, dim=-2, normalize=self.normalize)
-        o1 = rearrange(o1, "(b H) W g -> (b W) H g", H=H, W=W)
-        o1 = self.toep2(o1, dim=-2, normalize=self.normalize)
-        o1 = rearrange(o1, "(b W) H g -> b (H W) g", H=H, W=W)
-        
-        v2 = rearrange(v, "b (H W) g -> (b W) H g", H=H, W=W)
-        o2 = self.toep2(v2, dim=-2, normalize=self.normalize)
-        o2 = rearrange(o2, "(b W) H g -> (b H) W g", H=H, W=W)
-        o2 = self.toep1(o2, dim=-2, normalize=self.normalize)
-        o2 = rearrange(o2, "(b H) W g -> b (H W) g", H=H, W=W)
-        output = o1 + o2
-        # dropout
-        if self.p > 0:
-            output = self.dropout(output)
+        v = self.act(self.v_proj(x))  # (b, n, hd)
+        output = self.toep(v, dim=-2, normalize=self.normalize)
         output = u * output
         if self.use_norm:
             output = self.norm(output)
@@ -232,5 +198,3 @@ class SKITNO2d(nn.Module):
         output = self.o(output)
 
         return output, None
-
-    
