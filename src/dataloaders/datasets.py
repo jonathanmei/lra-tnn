@@ -1410,9 +1410,9 @@ class AAN(SequenceDataset):
             load_from_cache_file=False,
             num_proc=max(self.n_workers, 1),
             cache_file_names={
-                "train": "/mnt/cache/hanxiaodong/lra/data/aan/tmp/train.arrow",
-                "val": "/mnt/cache/hanxiaodong/lra/data/aan/tmp/val.arrow",
-                "test": "/mnt/cache/hanxiaodong/lra/data/aan/tmp/test.arrow",
+                "train": "/home/ubuntu/jmei/lra_release/aan/tmp/train.arrow",
+                "val": "/home/ubuntu/jmei/lra_release/aan/tmp/val.arrow",
+                "test": "/home/ubuntu/jmei/lra_release/aan/tmp/test.arrow",
             },
         )
         vocab = torchtext.vocab.build_vocab_from_iterator(

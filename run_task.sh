@@ -1,6 +1,11 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 export HYDRA_FULL_ERROR=1
+
+# pathfinder
+export DATA_PATH=${SCRIPT_DIR}/../../lra_release/lra_release/
+
+# pathfinderx, everything else
 export DATA_PATH=${SCRIPT_DIR}/../../lra_release/
 
 program_path=${SCRIPT_DIR}
@@ -27,11 +32,13 @@ dpb_layers=${18}
 PRENORM=${19}
 warmup_steps=${20}
 
+
+#    trainer.resume_from_checkpoint=${program_path}/outputs/2023-04-29/21-02-08/checkpoints/last.ckpt
 python ${program_path}/train.py \
 	wandb.project=Baselines-lra \
 	+wandb.name=${ARCH}-lra-${TASK} \
 	experiment=${ARCH}-lra-${TASK} \
-	trainer.gpus=$cards `#trainer.resume_from_checkpoint=${program_path}/outputs/2023-04-29/21-02-08/checkpoints/last.ckpt` \
+	trainer.gpus=$cards \
 	loader.batch_size=${BS} \
 	loader.num_workers=${n_works} \
 	scheduler.num_warmup_steps=${warmup_steps} \
