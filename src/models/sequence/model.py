@@ -189,7 +189,7 @@ class SequenceModel(SequenceModule):
                     _layer["dropout"] = dropout
                 # Ensure all layers are shaped the same way
             layers = layer * n_layers
-        elif layer[0]["_name_"] in ["skitno2d", "skitno"]:
+        elif layer[0]["_name_"] in ["skitno2d", "skitno", "tno_fd", "tno_fd2d"]:
             for _layer in layer:
                 # If layers don't specify dropout, add it
                 if _layer.get("dropout", None) is None:

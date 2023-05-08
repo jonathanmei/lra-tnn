@@ -9,7 +9,7 @@ layer:
     dropout: null
     transposed: False
 
-reformer_max_seq_len: 1000
+reformer_max_seq_len: 4096
 
 linformer_max_seq_len: 0
 ls_attn_heads: 0

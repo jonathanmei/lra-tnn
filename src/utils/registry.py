@@ -88,6 +88,8 @@ layer = {
     "tno2d": "src.models.sequence.tnn_draft.tno2d.TNO",
     "skitno": "src.models.sequence.tnn_draft.skitno.SKITNO",
     "skitno2d": "src.models.sequence.tnn_draft.skitno2d.SKITNO2d",
+    "tno_fd": "src.models.sequence.tnn_draft.tno_fd.TNO",
+    "tno_fd2d": "src.models.sequence.tnn_draft.tno_fd2d.TNO",
     # tnn
     "gtu": "src.models.sequence.tnn.gtu.Gtu",
     "gtu2d": "src.models.sequence.tnn.gtu2d.Gtu2d",

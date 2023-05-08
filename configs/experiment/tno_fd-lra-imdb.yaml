@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - /pipeline: imdb
-  - /model: transformer_cosformer
+  - /model: tno_fd
   - override /scheduler: cosine_warmup
 
 decoder:
@@ -9,9 +9,8 @@ decoder:
 
 model:
   dropout: 0.0
-  n_layers: 5
-  #d_model: 64
-  d_model: 192
+  n_layers: 2
+  d_model: 64
   prenorm: true
   norm: batch
 
@@ -19,12 +18,9 @@ dataset:
   l_max: 4096
   level: char
 
-loader:
-  batch_size: 16
-
 optimizer:
-  lr: 0.0005
-  weight_decay: 0.0
+  lr: 0.01
+  weight_decay: 0.05
 
 scheduler:
   num_training_steps: 50000

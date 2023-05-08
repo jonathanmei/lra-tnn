@@ -10,13 +10,17 @@ decoder:
 model:
   dropout: 0.0
   n_layers: 5
-  d_model: 64
+  #d_model: 64
+  d_model: 128
   prenorm: true
   norm: batch
 
 dataset:
   l_max: 4096
   level: char
+
+loader:
+  batch_size: 16
 
 optimizer:
   lr: 0.0001

@@ -1,34 +1,18 @@
-from  dataclasses import dataclass
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../..'))
 
 import torch
 import torch.nn.functional as F
-from torch import nn
+from einops import rearrange
+from torch import Tensor, nn
 
 from ..utils import logging_info
 from .dpb_v4 import SimpleRMSNorm
 
-from laxtnn.modules.skitno_inv_time import SKITnoInvTime 
+from laxtnn.modules.tno_fd import TnoFD
 
-@dataclass
-class SkiTnoConfig:
-    h: int
-    #n: int
-    dim: int
-    #rpe_dim: int
-    causal: bool
-    #use_pad: bool
-    #act: str
-    #rpe_type: int
-    #layers: int
-    gamma: float
-    #bias: bool
-    act_type: str
-
-
-class SKITNO(nn.Module):
+class TNO(nn.Module):
     def __init__(
         self,
         d_model,
@@ -46,15 +30,26 @@ class SKITNO(nn.Module):
         use_norm=False,
         norm_type="layernorm",
         # Toeplizt
+        use_exp=False,
+        use_neg_exp=False,
+        tno_max_l=512,
+        use_decay=False,
+        use_multi_decay=False,
+        dpb_embedding=512,
+        dpb_act="relu",
+        dpb_use_pad=True,
         normalize=False,
+        par_type=1,
+        dpb_type=1,
+        dpb_layers=3,
+        residual=False,
+        l=1,
+        transform_type=1,
         gamma=0.999,
         # token shift
         token_shift_type=-1,
-        #ski
-        #rank=32,
-        #nk=16,
-        rank=64,
-        nk=32,
+        # tno
+        tno_type=1,
         **unused
     ):
         # add
@@ -89,26 +84,59 @@ class SKITNO(nn.Module):
         logging_info(f"causal {self.causal}")
 
         # toep
+        self.max_l = tno_max_l
+        self.use_exp = use_exp
+        self.use_neg_exp = use_neg_exp
+        self.use_decay = use_decay
+        self.use_multi_decay = use_multi_decay
+        self.dpb_embedding = dpb_embedding
+        self.dpb_act = dpb_act
+        self.dpb_use_pad = dpb_use_pad
         self.normalize = normalize
+        self.par_type = par_type
+        self.dpb_type = dpb_type
+        self.residual = residual
+        self.l = l
+        self.transform_type = transform_type
         self.gamma = gamma
         self.bias = bias
-        config = SkiTnoConfig(
+        self.tno_type = tno_type
+        self.dpb_layers = dpb_layers
+        self.toep = TnoFD(
             h=self.num_heads,
+            #n=self.max_l,
             dim=self.head_dim,
+            rpe_dim=self.dpb_embedding,
             causal=self.causal,
+            use_decay=self.use_decay,
+            use_multi_decay=self.use_multi_decay,
+            act=self.dpb_act,
+            par_type=self.par_type,
+            residual=self.residual,
+            layers=self.dpb_layers,
+            #l=self.l,
             gamma=self.gamma,
-            #jmei
-            act_type="none",
-        ).__dict__
-
-        self.rank = rank
-        self.nk = nk
-        self.toep = SKITnoInvTime(r=rank, nk=nk, **config)
-
+            bias=self.bias,
+        )
         logging_info(f"self.num_heads {self.num_heads}")
+        logging_info(f"self.max_l {self.max_l}")
+        logging_info(f"self.use_exp {self.use_exp}")
+        logging_info(f"self.use_neg_exp {self.use_neg_exp}")
+        logging_info(f"self.use_decay {self.use_decay}")
+        logging_info(f"self.use_multi_decay {self.use_multi_decay}")
+        logging_info(f"self.dpb_embedding {self.dpb_embedding}")
+        logging_info(f"self.dpb_act {self.dpb_act}")
+        logging_info(f"self.dpb_use_pad {self.dpb_use_pad}")
         logging_info(f"self.normalize {self.normalize}")
+        logging_info(f"self.par_type {self.par_type}")
+        logging_info(f"self.dpb_type {self.dpb_type}")
+        logging_info(f"self.residual {self.residual}")
+        logging_info(f"self.l {self.l}")
+        logging_info(f"self.transform_type {self.transform_type}")
         logging_info(f"self.gamma {self.gamma}")
         logging_info(f"bias {bias}")
+        logging_info(f"tno_type {tno_type}")
+        logging_info(f"dpb_layers {dpb_layers}")
 
         # norm
         self.norm_type = norm_type
@@ -139,9 +167,18 @@ class SKITNO(nn.Module):
         nn.init.normal_(self.o.bias, std=0.02)
 
     def get_norm_fun(self, norm_type, d_model):
-        if norm_type == "simplermsnorm":
+        if norm_type == "rmsnorm":
+            logging_info("here! rmsnorm")
+            return RMSNorm(d_model)
+        elif norm_type == "gatedrmsnorm":
+            logging_info("here! gatedrmsnorm")
+            return GatedRMSNorm(d_model)
+        elif norm_type == "simplermsnorm":
             logging_info("here! simple rmsnorm")
             return SimpleRMSNorm(d_model)
+        elif norm_type == "scalenorm":
+            logging_info("here! scale norm")
+            return ScaleNorm(d_model)
         else:
             logging_info("here! layer norm")
             return nn.LayerNorm(d_model)
@@ -182,8 +219,37 @@ class SKITNO(nn.Module):
         else:
             return lambda x: x
 
+    # # 1D
+    # def forward(self, x, state = None):
+    #     # x: b, h * w, d
+    #     num_heads = self.num_heads
+    #     if self.token_shift_type == 1:
+    #         x = self.token_shift(x)
+    #     elif self.token_shift_type == 2:
+    #         q1 = self.token_shift(x)
+    #         x = self.coef * q1 + (1 - self.coef) * x
+
+    #     shortcut, x = x, self.pre_norm(x)
+    #     if self.resi_param:
+    #         shortcut = shortcut * self.d
+    #     u = self.act(self.u_proj(x))
+    #     v = self.act(self.v_proj(x))
+    #     # reshape
+    #     v = rearrange(v, 'b n (h d) -> b h n d', h=num_heads)
+    #     output = self.toep(v, dim=-2, normalize=self.normalize)
+    #     output = rearrange(output, 'b h n d -> b n (h d)')
+    #     output = u * output
+    #     if self.use_norm:
+    #         output = self.norm(output)
+
+    #     output = self.o(output) + shortcut
+
+    #     return output, None
+
+    # 1D
     def forward(self, x, state=None):
         # x: b, h * w, d
+        num_heads = self.num_heads
         if self.token_shift_type == 1:
             x = self.token_shift(x)
         elif self.token_shift_type == 2:
@@ -191,8 +257,11 @@ class SKITNO(nn.Module):
             x = self.coef * q1 + (1 - self.coef) * x
 
         u = self.act(self.u_proj(x))
-        v = self.act(self.v_proj(x))  # (b, n, hd)
+        v = self.act(self.v_proj(x))
+        # reshape
+        v = rearrange(v, "b n (h d) -> b h n d", h=num_heads)
         output = self.toep(v, dim=-2, normalize=self.normalize)
+        output = rearrange(output, "b h n d -> b n (h d)")
         output = u * output
         if self.use_norm:
             output = self.norm(output)

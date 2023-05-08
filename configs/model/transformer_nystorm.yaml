@@ -9,7 +9,7 @@ layer:
     dropout: null
     transposed: False
 
-nystorm_max_seq_len: 2048
+nystorm_max_seq_len: 4096
 
 reformer_max_seq_len: 0
 linformer_max_seq_len: 0
