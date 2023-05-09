@@ -1,6 +1,6 @@
-import math
+import os
 import sys
-from typing import Dict, Optional, Tuple
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../..'))
 
 import numpy as np
 import torch
@@ -157,45 +157,35 @@ class TNO(nn.Module):
                 self.forward = self.forward6
             else:
                 self.forward = self.forward4
-            self.toep1 = DynamicToepliztMultiheadV4(
+            self.toep1 = TnoFD(
                 h=self.num_heads,
-                n=self.max_l,
+                #n=self.max_l,
                 dim=self.head_dim,
-                dpb_dim=self.dpb_embedding,
+                rpe_dim=self.dpb_embedding,
                 causal=self.causal,
-                use_exp=self.use_exp,
-                use_neg_exp=self.use_neg_exp,
                 use_decay=self.use_decay,
                 use_multi_decay=self.use_multi_decay,
-                use_pad=self.dpb_use_pad,
                 act=self.dpb_act,
                 par_type=self.par_type,
                 residual=self.residual,
-                dpb_type=self.dpb_type,
                 layers=self.dpb_layers,
-                l=self.l,
-                transform_type=self.transform_type,
+                #l=self.l,
                 gamma=self.gamma,
                 bias=self.bias,
             )
-            self.toep2 = DynamicToepliztMultiheadV4(
+            self.toep2 = TnoFD(
                 h=self.num_heads,
-                n=self.max_l,
+                #n=self.max_l,
                 dim=self.head_dim,
-                dpb_dim=self.dpb_embedding,
+                rpe_dim=self.dpb_embedding,
                 causal=self.causal,
-                use_exp=self.use_exp,
-                use_neg_exp=self.use_neg_exp,
                 use_decay=self.use_decay,
                 use_multi_decay=self.use_multi_decay,
-                use_pad=self.dpb_use_pad,
                 act=self.dpb_act,
                 par_type=self.par_type,
                 residual=self.residual,
-                dpb_type=self.dpb_type,
                 layers=self.dpb_layers,
-                l=self.l,
-                transform_type=self.transform_type,
+                #l=self.l,
                 gamma=self.gamma,
                 bias=self.bias,
             )

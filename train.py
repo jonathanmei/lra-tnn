@@ -483,7 +483,6 @@ def create_trainer(config, **kwargs):
         # Can pass in config_exclude_keys='wandb' to remove certain groups
 
         import wandb
-        # TODO: figure out how to pass experiment name
         logger = WandbLogger(
             config=utils.to_dict(config, recursive=True),
             settings=wandb.Settings(start_method="fork"),
