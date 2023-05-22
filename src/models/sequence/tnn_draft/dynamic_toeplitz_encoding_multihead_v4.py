@@ -10,7 +10,6 @@ from einops import rearrange, repeat
 
 from ..utils import logging_info
 from .dpb_v4 import DynamicPosBiasV4
-from .dpb_v8 import DynamicPosBiasV8
 
 
 class DynamicToepliztMultiheadV4(nn.Module):
@@ -62,22 +61,9 @@ class DynamicToepliztMultiheadV4(nn.Module):
             self.lambda_ = gamma
             self.gamma = nn.Parameter(torch.randn(self.h, 1, self.dim))
 
-        if self.dpb_type == 4:
-            self.dpb = DynamicPosBiasV4(
-                dim=dpb_dim, outdim=self.h * self.dim, residual=residual, bias=bias
-            )
-        elif self.dpb_type == 8:
-            self.dpb = DynamicPosBiasV8(
-                dim=dpb_dim,
-                outdim=self.h * self.dim,
-                residual=residual,
-                bias=bias,
-                layers=layers,
-            )
-        else:
-            self.dpb = DynamicPosBiasV4(
-                dim=dpb_dim, outdim=self.h * self.dim, residual=residual, bias=bias
-            )
+        self.dpb = DynamicPosBiasV4(
+            dim=dpb_dim, outdim=self.h * self.dim, residual=residual, bias=bias
+        )
 
         if self.causal:
             self.forward = self.forward_causal
