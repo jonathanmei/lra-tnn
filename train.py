@@ -483,11 +483,14 @@ def create_trainer(config, **kwargs):
         # Can pass in config_exclude_keys='wandb' to remove certain groups
 
         import wandb
+        wandb_name = config.get("wandb.name")
+        offline = wandb_name is None
         logger = WandbLogger(
             config=utils.to_dict(config, recursive=True),
             settings=wandb.Settings(start_method="fork"),
+            offline=offline,
             project=config.wandb.project,
-            name=config.wandb.name,
+            name=wandb_name if not offline else "",
         )
 
     # Lightning callbacks
