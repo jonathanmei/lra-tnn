@@ -1,6 +1,6 @@
 # LRA experiments for TNN (from "SKI to go Faster")
 
-A submodule to run Long-Range Arena experiments for TNN, SKI-TNN, and FD-TNN, implementing ["SKI to go Faster: Accelerating Toeplitz Neural Networks via Asymmetric Kernels."](https://arxiv.org/abs/2305.09028)
+A submodule to run Long-Range Arena experiments for TNN, [SKI-TNN, and FD-TNN](http://github.com/jonathanmei/ski-tnn), implementing ["SKI to go Faster: Accelerating Toeplitz Neural Networks via Asymmetric Kernels."](https://arxiv.org/abs/2305.09028)
 
 The `main` branch is the minimal code that reproduces the paper. The `dev` branch is derived from a custom pin of [lra](https://github.com/OpenNLPLab/lra), which is itself based on [S4](https://github.com/HazyResearch/state-spaces). The `dev` branch allows running experiments on a larger set of architectures.
 
